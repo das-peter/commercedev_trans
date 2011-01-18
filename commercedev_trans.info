@@ -40,6 +40,7 @@ dependencies[] = views_ui
 ; Install contributed modules for translation first.
 dependencies[] = translation
 dependencies[] = title
+dependencies[] = cck
 
 ; Install the Commerce modules.
 dependencies[] = commerce

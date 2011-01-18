@@ -12,6 +12,7 @@ DEPENDENCIES:
 
 http://github.com/rszrama/commercedev (please check the dependencies of this profile)
 http://drupal.org/project/translation
+http://drupal.org/project/cck - http://drupal.org/node/788692#comment-3944002 (Workaround to be able translating option labels / default value)
 http://drupal.org/project/title (Actual code: http://drupal.org/node/924968 )
 
 http://drupal.org/project/addressfield
