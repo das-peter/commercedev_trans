@@ -1,0 +1,107 @@
+<?php
+// $Id$
+
+/**
+ * Implements hook_install().
+ *
+ * Perform actions to set up the site for this profile.
+ */
+function commercedev_trans_install() {
+  global $user;
+
+  // Include standard installation script
+  // require DRUPAL_ROOT . '/profiles/standard/standard.install';
+
+  // Include commercedev installation script
+  require DRUPAL_ROOT . '/profiles/commercedev/commercedev.install';
+
+  // start default install
+  //standard_install();
+
+  // start commerce install
+  commercedev_install();
+
+  module_invoke('locale', 'init');
+
+  // Enable languages.
+  // make sure every language has an url prefix - otherwise this can lead to
+  // strange behaviour if you use url language detection.
+  // Can be done manually here: admin/config/regional/language/add
+  $languages = array('en', 'de', 'es');
+  $installedLanguages = language_list();
+  foreach ($languages as $weight => $langcode) {
+    $default = $weight == 0;
+    if (!isset($installedLanguages[$langcode])) {
+      locale_add_language($langcode, NULL, NULL, LANGUAGE_LTR, '', '', TRUE, $default);
+    }
+
+    db_update('languages')
+    ->fields(array(
+      'weight' => $weight,
+  		'prefix' => $langcode,
+    ))
+    ->condition('language', $langcode)
+    ->execute();
+  }
+
+  // Interface Translation import.
+  // Can be done manually here: admin/config/regional/translate/import
+  $po_files = array();
+  $po_files['de'] = dirname(__FILE__) . '/drupal-7.0.de.po';
+  $po_files['es'] = dirname(__FILE__) . '/drupal-7.0.es.po';
+  foreach ($po_files as $langcode => $source_file){
+    // Create necessary file object
+    $file = new stdClass();
+    $file->uid      = $user->uid;
+    $file->status   = 0;
+    $file->filename = trim(basename($source_file), '.');
+    $file->uri      = $source_file;
+    $file->filemime = file_get_mimetype($file->filename);
+    $file->filesize = filesize($source_file);
+
+    // Now import strings into the language
+    if ($return = _locale_import_po($file, $langcode, LOCALE_IMPORT_OVERWRITE, 'default') == FALSE) {
+      $variables = array('%filename' => $file->filename);
+      drupal_set_message(t('The translation import of %filename failed.', $variables), 'error');
+      watchdog('locale', 'The translation import of %filename failed.', $variables, WATCHDOG_ERROR);
+    }
+  }
+
+  // Enable field based translation.
+  // Can be done manually here: admin/config/regional/translation
+  variable_set('translation_entity_types', array(
+    'commerce_line_item' => 'commerce_line_item',
+    'commerce_order' => 'commerce_order',
+    'commerce_product' => 'commerce_product',
+    'node' => 'node',
+    'comment' => 0,
+    'taxonomy_term' => 0,
+    'user' => 0,
+    'rules_config' => 0,
+  ));
+
+  // Enable language switcher block.
+  // Can be done manually here: admin/structure/block
+  $default_theme = variable_get('theme_default', 'bartik');
+  $query = db_insert('block')->fields(array('module', 'delta', 'theme', 'status', 'weight', 'region', 'pages', 'cache'));
+  $query->values(array(
+    'module' => 'locale',
+    'delta' => 'language',
+    'theme' => $default_theme,
+    'status' => 1,
+    'weight' => 0,
+    'region' => 'sidebar_first',
+    'pages' => '',
+    'cache' => -1,
+  ));
+  $query->execute();
+
+//  // Enable title_field for all node bundles
+//  $bundles = field_info_bundles('node');
+//  foreach ($bundles as $bundle => $bundle_info) {
+//    if (!variable_get('title_field_enabled_' . $bundle, FALSE)) {
+//      variable_set('title_field_enabled_' . $bundle, TRUE);
+//      title_configure_bundle('node', $bundle);
+//    }
+//  }
+}
